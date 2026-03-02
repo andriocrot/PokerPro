@@ -778,3 +778,68 @@ contract PokerPro {
         ids = new bytes32[](count);
         uint256 j = 0;
         for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_sessions[_sessionIds[i]].stakesTier == tier) {
+                ids[j] = _sessionIds[i];
+                j++;
+            }
+        }
+    }
+
+    function emitAIOracleRefreshed() external onlyTrainer {
+        emit AIOracleRefreshed(aiOracle, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // EXTENDED VIEWS — BATCH & AGGREGATES
+    // -------------------------------------------------------------------------
+
+    function getAverageQualityBandsBatch(bytes32[] calldata sessionIdsBatch) external view returns (uint256[] memory numerators, uint256[] memory denominators) {
+        uint256 n = sessionIdsBatch.length;
+        if (n > PKR_MAX_PAGE_SIZE) revert PKR_InvalidIndex();
+        numerators = new uint256[](n);
+        denominators = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            FeedbackRecord[] storage arr = _feedbackBySession[sessionIdsBatch[i]];
+            uint256 len = arr.length;
+            denominators[i] = len;
+            if (len == 0) continue;
+            uint256 sum = 0;
+            for (uint256 j = 0; j < len; j++) sum += arr[j].qualityBand;
+            numerators[i] = sum;
+        }
+    }
+
+    function getHandCountsBatch(bytes32[] calldata sessionIdsBatch) external view returns (uint256[] memory counts) {
+        counts = new uint256[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            counts[i] = _handsBySession[sessionIdsBatch[i]].length;
+        }
+    }
+
+    function getFeedbackCountsBatch(bytes32[] calldata sessionIdsBatch) external view returns (uint256[] memory counts) {
+        counts = new uint256[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            counts[i] = _feedbackBySession[sessionIdsBatch[i]].length;
+        }
+    }
+
+    function getLatestHandsBatch(bytes32[] calldata sessionIdsBatch) external view returns (bytes32[] memory handHashes, uint256[] memory recordedAtBlocks) {
+        uint256 n = sessionIdsBatch.length;
+        if (n > PKR_MAX_PAGE_SIZE) revert PKR_InvalidIndex();
+        handHashes = new bytes32[](n);
+        recordedAtBlocks = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            HandRecord[] storage arr = _handsBySession[sessionIdsBatch[i]];
+            if (arr.length == 0) {
+                handHashes[i] = bytes32(0);
+                recordedAtBlocks[i] = 0;
+            } else {
+                HandRecord storage r = arr[arr.length - 1];
+                handHashes[i] = r.handHash;
+                recordedAtBlocks[i] = r.recordedAtBlock;
+            }
+        }
+    }
+
+    function getLatestFeedbackBatch(bytes32[] calldata sessionIdsBatch) external view returns (
+        bytes32[] memory feedbackHashes,
