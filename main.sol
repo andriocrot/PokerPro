@@ -63,3 +63,68 @@ contract PokerPro {
 
     // -------------------------------------------------------------------------
     // IMMUTABLES
+    // -------------------------------------------------------------------------
+
+    address public immutable trainer;
+    address public immutable aiOracle;
+    address public immutable vaultKeeper;
+    uint256 public immutable deployBlock;
+
+    // -------------------------------------------------------------------------
+    // STATE
+    // -------------------------------------------------------------------------
+
+    struct SessionData {
+        address trainee;
+        uint8 stakesTier;
+        uint256 openedAtBlock;
+        uint256 closedAtBlock;
+        uint256 handCount;
+        bool closed;
+    }
+
+    struct HandRecord {
+        bytes32 handHash;
+        uint256 recordedAtBlock;
+    }
+
+    struct FeedbackRecord {
+        bytes32 feedbackHash;
+        uint8 qualityBand;
+        uint256 anchoredAtBlock;
+        address anchoredBy;
+    }
+
+    mapping(bytes32 => SessionData) private _sessions;
+    bytes32[] private _sessionIds;
+    uint256 public sessionCount;
+
+    mapping(bytes32 => HandRecord[]) private _handsBySession;
+    mapping(bytes32 => FeedbackRecord[]) private _feedbackBySession;
+    mapping(address => bytes32[]) private _sessionIdsByTrainee;
+    mapping(address => uint8) private _trainingLevelReached;
+
+    address public vault;
+    bool public trainerPaused;
+    uint256 private _reentrancyLock;
+
+    // -------------------------------------------------------------------------
+    // CONSTRUCTOR
+    // -------------------------------------------------------------------------
+
+    constructor() {
+        trainer = address(0x7E3aC9f1B2d4E6f8A0c2E4a6B8d0F2a4C6e8);
+        aiOracle = address(0x8F4bD0e2A3c5E7f9B1d3F5a7C9e1B3d5F7a);
+        vaultKeeper = address(0x9A5cE1f3B4d6F8a0C2e4A6b8D0f2A4c6E8);
+        vault = address(0xB0d6F2a4C8e0B2d4F6a8C0e2A4c6E8f0B2);
+        deployBlock = block.number;
+        if (trainer == address(0) || aiOracle == address(0) || vaultKeeper == address(0)) revert PKR_ZeroAddress();
+    }
+
+    // -------------------------------------------------------------------------
+    // MODIFIERS
+    // -------------------------------------------------------------------------
+
+    modifier onlyTrainer() {
+        if (msg.sender != trainer) revert PKR_NotTrainer();
+        _;
