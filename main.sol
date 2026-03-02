@@ -648,3 +648,68 @@ contract PokerPro {
 
     function getHandAnchorConstant() external pure returns (bytes32) {
         return PKR_HAND_ANCHOR;
+    }
+
+    function getMaxSessions() external pure returns (uint256) {
+        return PKR_MAX_SESSIONS;
+    }
+
+    function getMaxHandsPerSession() external pure returns (uint256) {
+        return PKR_MAX_HANDS_PER_SESSION;
+    }
+
+    function getStakesTierMax() external pure returns (uint256) {
+        return PKR_STAKES_TIER_MAX;
+    }
+
+    function getQualityBandMax() external pure returns (uint256) {
+        return PKR_QUALITY_BAND_MAX;
+    }
+
+    function getTrainingLevelsMax() external pure returns (uint256) {
+        return PKR_TRAINING_LEVELS;
+    }
+
+    function getMaxPageSize() external pure returns (uint256) {
+        return PKR_MAX_PAGE_SIZE;
+    }
+
+    function sessionExists(bytes32 sessionId) external view returns (bool) {
+        return _sessions[sessionId].openedAtBlock != 0;
+    }
+
+    function getSessionsOpenedAfterBlock(uint256 fromBlock) external view returns (bytes32[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_sessions[_sessionIds[i]].openedAtBlock >= fromBlock) count++;
+        }
+        ids = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_sessions[_sessionIds[i]].openedAtBlock >= fromBlock) {
+                ids[j] = _sessionIds[i];
+                j++;
+            }
+        }
+    }
+
+    function getSessionsClosedAfterBlock(uint256 fromBlock) external view returns (bytes32[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            SessionData storage s = _sessions[_sessionIds[i]];
+            if (s.closed && s.closedAtBlock >= fromBlock) count++;
+        }
+        ids = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            SessionData storage s = _sessions[_sessionIds[i]];
+            if (s.closed && s.closedAtBlock >= fromBlock) {
+                ids[j] = _sessionIds[i];
+                j++;
+            }
+        }
+    }
+
+    function getFeedbackAnchorsBatch(bytes32 sessionId, uint256[] calldata indices) external view returns (bytes32[] memory anchors) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        anchors = new bytes32[](indices.length);
