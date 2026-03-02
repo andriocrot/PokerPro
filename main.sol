@@ -713,3 +713,68 @@ contract PokerPro {
     function getFeedbackAnchorsBatch(bytes32 sessionId, uint256[] calldata indices) external view returns (bytes32[] memory anchors) {
         FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
         anchors = new bytes32[](indices.length);
+        for (uint256 i = 0; i < indices.length; i++) {
+            if (indices[i] >= arr.length) revert PKR_InvalidIndex();
+            FeedbackRecord storage r = arr[indices[i]];
+            anchors[i] = _computeFeedbackAnchor(sessionId, r.feedbackHash, r.qualityBand, r.anchoredAtBlock);
+        }
+    }
+
+    function getHandAnchorsBatch(bytes32 sessionId, uint256[] calldata indices) external view returns (bytes32[] memory anchors) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        anchors = new bytes32[](indices.length);
+        for (uint256 i = 0; i < indices.length; i++) {
+            if (indices[i] >= arr.length) revert PKR_InvalidIndex();
+            HandRecord storage r = arr[indices[i]];
+            anchors[i] = _computeHandAnchor(sessionId, r.handHash, indices[i], r.recordedAtBlock);
+        }
+    }
+
+    function qualityBandDistribution(bytes32 sessionId) external view returns (uint256[] memory counts) {
+        counts = new uint256[](PKR_QUALITY_BAND_MAX + 1);
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        for (uint256 i = 0; i < arr.length; i++) {
+            uint8 b = arr[i].qualityBand;
+            if (b <= PKR_QUALITY_BAND_MAX) counts[b]++;
+        }
+    }
+
+    function medianQualityBand(bytes32 sessionId) external view returns (uint8) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        uint256 len = arr.length;
+        if (len == 0) return 0;
+        uint256[] memory bands = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) bands[i] = arr[i].qualityBand;
+        for (uint256 i = 0; i < len - 1; i++) {
+            for (uint256 j = i + 1; j < len; j++) {
+                if (bands[j] < bands[i]) {
+                    uint256 t = bands[i];
+                    bands[i] = bands[j];
+                    bands[j] = t;
+                }
+            }
+        }
+        if (len % 2 == 1) return uint8(bands[len / 2]);
+        return uint8((bands[len / 2 - 1] + bands[len / 2]) / 2);
+    }
+
+    function getOpenSessionsCount() external view returns (uint256 count) {
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (!_sessions[_sessionIds[i]].closed) count++;
+        }
+    }
+
+    function getClosedSessionsCount() external view returns (uint256 count) {
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_sessions[_sessionIds[i]].closed) count++;
+        }
+    }
+
+    function getSessionsByStakesTier(uint8 tier) external view returns (bytes32[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_sessions[_sessionIds[i]].stakesTier == tier) count++;
+        }
+        ids = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
