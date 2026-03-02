@@ -323,3 +323,68 @@ contract PokerPro {
         HandRecord[] storage arr = _handsBySession[sessionId];
         if (index >= arr.length) revert PKR_InvalidIndex();
         HandRecord storage r = arr[index];
+        return (r.handHash, r.recordedAtBlock);
+    }
+
+    function feedbackCount(bytes32 sessionId) external view returns (uint256) {
+        return _feedbackBySession[sessionId].length;
+    }
+
+    function getFeedback(bytes32 sessionId, uint256 index) external view returns (
+        bytes32 feedbackHash,
+        uint8 qualityBand,
+        uint256 anchoredAtBlock,
+        address anchoredBy
+    ) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        if (index >= arr.length) revert PKR_InvalidIndex();
+        FeedbackRecord storage r = arr[index];
+        return (r.feedbackHash, r.qualityBand, r.anchoredAtBlock, r.anchoredBy);
+    }
+
+    function sessionCountForTrainee(address trainee) external view returns (uint256) {
+        return _sessionIdsByTrainee[trainee].length;
+    }
+
+    function sessionIdForTrainee(address trainee, uint256 index) external view returns (bytes32) {
+        if (index >= _sessionIdsByTrainee[trainee].length) revert PKR_InvalidIndex();
+        return _sessionIdsByTrainee[trainee][index];
+    }
+
+    function trainingLevelReached(address trainee) external view returns (uint8) {
+        return _trainingLevelReached[trainee];
+    }
+
+    function isSessionClosed(bytes32 sessionId) external view returns (bool) {
+        return _sessions[sessionId].closed;
+    }
+
+    function isSessionOpen(bytes32 sessionId) external view returns (bool) {
+        SessionData storage s = _sessions[sessionId];
+        return s.openedAtBlock != 0 && !s.closed;
+    }
+
+    // -------------------------------------------------------------------------
+    // INTERNAL HELPERS
+    // -------------------------------------------------------------------------
+
+    function _computeFeedbackAnchor(bytes32 sessionId, bytes32 feedbackHash, uint8 qualityBand, uint256 atBlock) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(PKR_FEEDBACK_ANCHOR, sessionId, feedbackHash, qualityBand, atBlock));
+    }
+
+    function _computeHandAnchor(bytes32 sessionId, bytes32 handHash, uint256 handIndex, uint256 atBlock) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(PKR_HAND_ANCHOR, sessionId, handHash, handIndex, atBlock));
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEWS — VERIFICATION (AI POKER TRAINING)
+    // -------------------------------------------------------------------------
+
+    function verifyFeedbackAnchor(bytes32 sessionId, uint256 feedbackIndex) external view returns (bytes32 computed) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        if (feedbackIndex >= arr.length) revert PKR_InvalidIndex();
+        FeedbackRecord storage r = arr[feedbackIndex];
+        return _computeFeedbackAnchor(sessionId, r.feedbackHash, r.qualityBand, r.anchoredAtBlock);
+    }
+
+    function verifyHandAnchor(bytes32 sessionId, uint256 handIndex) external view returns (bytes32 computed) {
