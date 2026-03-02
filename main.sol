@@ -1233,3 +1233,68 @@ contract PokerPro {
                 uint256 ci = _handsBySession[_sessionIds[indices[i]]].length;
                 uint256 cj = _handsBySession[_sessionIds[indices[j]]].length;
                 if (cj > ci) {
+                    uint256 t = indices[i];
+                    indices[i] = indices[j];
+                    indices[j] = t;
+                }
+            }
+        }
+        for (uint256 i = 0; i < limit; i++) {
+            ids[i] = _sessionIds[indices[i]];
+            counts[i] = _handsBySession[ids[i]].length;
+        }
+    }
+
+    function getTopSessionsByFeedbackCount(uint256 limit) external view returns (bytes32[] memory ids, uint256[] memory counts) {
+        uint256 n = _sessionIds.length;
+        if (n == 0) {
+            ids = new bytes32[](0);
+            counts = new uint256[](0);
+            return (ids, counts);
+        }
+        if (limit > n) limit = n;
+        ids = new bytes32[](limit);
+        counts = new uint256[](limit);
+        uint256[] memory indices = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) indices[i] = i;
+        for (uint256 i = 0; i < n - 1; i++) {
+            for (uint256 j = i + 1; j < n; j++) {
+                uint256 ci = _feedbackBySession[_sessionIds[indices[i]]].length;
+                uint256 cj = _feedbackBySession[_sessionIds[indices[j]]].length;
+                if (cj > ci) {
+                    uint256 t = indices[i];
+                    indices[i] = indices[j];
+                    indices[j] = t;
+                }
+            }
+        }
+        for (uint256 i = 0; i < limit; i++) {
+            ids[i] = _sessionIds[indices[i]];
+            counts[i] = _feedbackBySession[ids[i]].length;
+        }
+    }
+
+    function getQualityBandDistributionsBatch(bytes32[] calldata sessionIdsBatch) external view returns (uint256[][] memory distributions) {
+        uint256 n = sessionIdsBatch.length;
+        if (n > PKR_MAX_PAGE_SIZE) revert PKR_InvalidIndex();
+        distributions = new uint256[][](n);
+        for (uint256 idx = 0; idx < n; idx++) {
+            uint256[] memory counts = new uint256[](PKR_QUALITY_BAND_MAX + 1);
+            FeedbackRecord[] storage arr = _feedbackBySession[sessionIdsBatch[idx]];
+            for (uint256 i = 0; i < arr.length; i++) {
+                uint8 b = arr[i].qualityBand;
+                if (b <= PKR_QUALITY_BAND_MAX) counts[b]++;
+            }
+            distributions[idx] = counts;
+        }
+    }
+
+    function getMedianQualityBandsBatch(bytes32[] calldata sessionIdsBatch) external view returns (uint8[] memory medians) {
+        uint256 n = sessionIdsBatch.length;
+        if (n > PKR_MAX_PAGE_SIZE) revert PKR_InvalidIndex();
+        medians = new uint8[](n);
+        for (uint256 idx = 0; idx < n; idx++) {
+            FeedbackRecord[] storage arr = _feedbackBySession[sessionIdsBatch[idx]];
+            uint256 len = arr.length;
+            if (len == 0) {
+                medians[idx] = 0;
