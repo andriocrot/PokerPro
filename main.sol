@@ -388,3 +388,68 @@ contract PokerPro {
     }
 
     function verifyHandAnchor(bytes32 sessionId, uint256 handIndex) external view returns (bytes32 computed) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        if (handIndex >= arr.length) revert PKR_InvalidIndex();
+        HandRecord storage r = arr[handIndex];
+        return _computeHandAnchor(sessionId, r.handHash, handIndex, r.recordedAtBlock);
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEWS — PAGINATION & BATCH
+    // -------------------------------------------------------------------------
+
+    function getSessionIdsSlice(uint256 offset, uint256 limit) external view returns (bytes32[] memory ids) {
+        uint256 total = _sessionIds.length;
+        if (offset >= total) return new bytes32[](0);
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        uint256 n = end - offset;
+        ids = new bytes32[](n);
+        for (uint256 i = 0; i < n; i++) ids[i] = _sessionIds[offset + i];
+    }
+
+    function getHandsSlice(bytes32 sessionId, uint256 offset, uint256 limit) external view returns (
+        bytes32[] memory handHashes,
+        uint256[] memory recordedAtBlocks
+    ) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        uint256 total = arr.length;
+        if (offset >= total) {
+            handHashes = new bytes32[](0);
+            recordedAtBlocks = new uint256[](0);
+            return (handHashes, recordedAtBlocks);
+        }
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        uint256 n = end - offset;
+        handHashes = new bytes32[](n);
+        recordedAtBlocks = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            HandRecord storage r = arr[offset + i];
+            handHashes[i] = r.handHash;
+            recordedAtBlocks[i] = r.recordedAtBlock;
+        }
+    }
+
+    function getFeedbackSlice(bytes32 sessionId, uint256 offset, uint256 limit) external view returns (
+        bytes32[] memory feedbackHashes,
+        uint8[] memory qualityBands,
+        uint256[] memory anchoredAtBlocks,
+        address[] memory anchoredBy
+    ) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        uint256 total = arr.length;
+        if (offset >= total) {
+            feedbackHashes = new bytes32[](0);
+            qualityBands = new uint8[](0);
+            anchoredAtBlocks = new uint256[](0);
+            anchoredBy = new address[](0);
+            return (feedbackHashes, qualityBands, anchoredAtBlocks, anchoredBy);
+        }
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        uint256 n = end - offset;
+        feedbackHashes = new bytes32[](n);
+        qualityBands = new uint8[](n);
+        anchoredAtBlocks = new uint256[](n);
+        anchoredBy = new address[](n);
