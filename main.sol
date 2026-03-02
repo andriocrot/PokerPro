@@ -1103,3 +1103,68 @@ contract PokerPro {
     }
 
     function maxPageSizeLimit() external pure returns (uint256) {
+        return PKR_MAX_PAGE_SIZE;
+    }
+
+    function feedbackCacheBlocks() external pure returns (uint256) {
+        return PKR_FEEDBACK_CACHE_BLOCKS;
+    }
+
+    function existsSession(bytes32 sessionId) external view returns (bool) {
+        return _sessions[sessionId].openedAtBlock != 0;
+    }
+
+    function handsRecordedInSession(bytes32 sessionId) external view returns (uint256) {
+        return _handsBySession[sessionId].length;
+    }
+
+    function feedbackAnchoredInSession(bytes32 sessionId) external view returns (uint256) {
+        return _feedbackBySession[sessionId].length;
+    }
+
+    function traineeSessionCount(address trainee) external view returns (uint256) {
+        return _sessionIdsByTrainee[trainee].length;
+    }
+
+    function traineeSessionAt(address trainee, uint256 index) external view returns (bytes32) {
+        if (index >= _sessionIdsByTrainee[trainee].length) revert PKR_InvalidIndex();
+        return _sessionIdsByTrainee[trainee][index];
+    }
+
+    function trainingLevelOf(address trainee) external view returns (uint8) {
+        return _trainingLevelReached[trainee];
+    }
+
+    function getHandsRecordedAfterBlock(bytes32 sessionId, uint256 fromBlock) external view returns (
+        uint256[] memory indices,
+        bytes32[] memory handHashes,
+        uint256[] memory recordedAtBlocks
+    ) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        uint256 count = 0;
+        for (uint256 i = 0; i < arr.length; i++) {
+            if (arr[i].recordedAtBlock >= fromBlock) count++;
+        }
+        indices = new uint256[](count);
+        handHashes = new bytes32[](count);
+        recordedAtBlocks = new uint256[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < arr.length; i++) {
+            if (arr[i].recordedAtBlock >= fromBlock) {
+                indices[j] = i;
+                handHashes[j] = arr[i].handHash;
+                recordedAtBlocks[j] = arr[i].recordedAtBlock;
+                j++;
+            }
+        }
+    }
+
+    function getFeedbackAnchoredAfterBlock(bytes32 sessionId, uint256 fromBlock) external view returns (
+        uint256[] memory indices,
+        bytes32[] memory feedbackHashes,
+        uint8[] memory qualityBands,
+        uint256[] memory anchoredAtBlocks
+    ) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        uint256 count = 0;
+        for (uint256 i = 0; i < arr.length; i++) {
