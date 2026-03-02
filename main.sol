@@ -518,3 +518,68 @@ contract PokerPro {
         handCounts = new uint256[](n);
         closedFlags = new bool[](n);
         for (uint256 i = 0; i < n; i++) {
+            SessionData storage s = _sessions[sessionIdsBatch[i]];
+            trainees[i] = s.trainee;
+            stakesTiers[i] = s.stakesTier;
+            openedAtBlocks[i] = s.openedAtBlock;
+            handCounts[i] = s.handCount;
+            closedFlags[i] = s.closed;
+        }
+    }
+
+    function getConfig() external pure returns (
+        uint256 maxSessions,
+        uint256 maxHandsPerSession,
+        uint256 maxBatchHands,
+        uint256 stakesTierMax,
+        uint256 qualityBandMax,
+        uint256 trainingLevels,
+        uint256 maxPageSize
+    ) {
+        return (
+            PKR_MAX_SESSIONS,
+            PKR_MAX_HANDS_PER_SESSION,
+            PKR_MAX_BATCH_HANDS,
+            PKR_STAKES_TIER_MAX,
+            PKR_QUALITY_BAND_MAX,
+            PKR_TRAINING_LEVELS,
+            PKR_MAX_PAGE_SIZE
+        );
+    }
+
+    function getRoles() external view returns (address trainerAddr, address aiOracleAddr, address vaultKeeperAddr, address vaultAddr) {
+        return (trainer, aiOracle, vaultKeeper, vault);
+    }
+
+    function getDeployInfo() external view returns (uint256 blockNumber, bool paused) {
+        return (deployBlock, trainerPaused);
+    }
+
+    function totalHandsRecorded() external view returns (uint256 total) {
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            total += _handsBySession[_sessionIds[i]].length;
+        }
+    }
+
+    function totalFeedbackAnchored() external view returns (uint256 total) {
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            total += _feedbackBySession[_sessionIds[i]].length;
+        }
+    }
+
+    function getLatestHand(bytes32 sessionId) external view returns (bytes32 handHash, uint256 recordedAtBlock) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        if (arr.length == 0) revert PKR_InvalidIndex();
+        HandRecord storage r = arr[arr.length - 1];
+        return (r.handHash, r.recordedAtBlock);
+    }
+
+    function getLatestFeedback(bytes32 sessionId) external view returns (
+        bytes32 feedbackHash,
+        uint8 qualityBand,
+        uint256 anchoredAtBlock,
+        address anchoredBy
+    ) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        if (arr.length == 0) revert PKR_InvalidIndex();
+        FeedbackRecord storage r = arr[arr.length - 1];
