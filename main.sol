@@ -1038,3 +1038,68 @@ contract PokerPro {
         return _sessions[sessionId].handCount;
     }
 
+    function sessionIsClosed(bytes32 sessionId) external view returns (bool) {
+        return _sessions[sessionId].closed;
+    }
+
+    function trainerAddress() external view returns (address) {
+        return trainer;
+    }
+
+    function aiOracleAddress() external view returns (address) {
+        return aiOracle;
+    }
+
+    function vaultKeeperAddress() external view returns (address) {
+        return vaultKeeper;
+    }
+
+    function vaultAddress() external view returns (address) {
+        return vault;
+    }
+
+    function deployBlockNumber() external view returns (uint256) {
+        return deployBlock;
+    }
+
+    function paused() external view returns (bool) {
+        return trainerPaused;
+    }
+
+    function domainSalt() external pure returns (bytes32) {
+        return PKR_DOMAIN_SALT;
+    }
+
+    function feedbackAnchorSalt() external pure returns (bytes32) {
+        return PKR_FEEDBACK_ANCHOR;
+    }
+
+    function handAnchorSalt() external pure returns (bytes32) {
+        return PKR_HAND_ANCHOR;
+    }
+
+    function maxSessionsLimit() external pure returns (uint256) {
+        return PKR_MAX_SESSIONS;
+    }
+
+    function maxHandsPerSessionLimit() external pure returns (uint256) {
+        return PKR_MAX_HANDS_PER_SESSION;
+    }
+
+    function maxBatchHandsLimit() external pure returns (uint256) {
+        return PKR_MAX_BATCH_HANDS;
+    }
+
+    function stakesTierMaximum() external pure returns (uint256) {
+        return PKR_STAKES_TIER_MAX;
+    }
+
+    function qualityBandMaximum() external pure returns (uint256) {
+        return PKR_QUALITY_BAND_MAX;
+    }
+
+    function trainingLevelsMaximum() external pure returns (uint256) {
+        return PKR_TRAINING_LEVELS;
+    }
+
+    function maxPageSizeLimit() external pure returns (uint256) {
