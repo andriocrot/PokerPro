@@ -1298,3 +1298,68 @@ contract PokerPro {
             uint256 len = arr.length;
             if (len == 0) {
                 medians[idx] = 0;
+                continue;
+            }
+            uint256[] memory bands = new uint256[](len);
+            for (uint256 i = 0; i < len; i++) bands[i] = arr[i].qualityBand;
+            for (uint256 i = 0; i < len - 1; i++) {
+                for (uint256 j = i + 1; j < len; j++) {
+                    if (bands[j] < bands[i]) {
+                        uint256 t = bands[i];
+                        bands[i] = bands[j];
+                        bands[j] = t;
+                    }
+                }
+            }
+            if (len % 2 == 1) medians[idx] = uint8(bands[len / 2]);
+            else medians[idx] = uint8((bands[len / 2 - 1] + bands[len / 2]) / 2);
+        }
+    }
+
+    function getStakesTierDistribution() external view returns (uint256[] memory counts) {
+        counts = new uint256[](PKR_STAKES_TIER_MAX + 1);
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            uint8 t = _sessions[_sessionIds[i]].stakesTier;
+            if (t <= PKR_STAKES_TIER_MAX) counts[t]++;
+        }
+    }
+
+    function getSessionBatchExists(bytes32[] calldata sessionIdsBatch) external view returns (bool[] memory exists) {
+        exists = new bool[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            exists[i] = _sessions[sessionIdsBatch[i]].openedAtBlock != 0;
+        }
+    }
+
+    function getSessionBatchClosed(bytes32[] calldata sessionIdsBatch) external view returns (bool[] memory closed) {
+        closed = new bool[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            closed[i] = _sessions[sessionIdsBatch[i]].closed;
+        }
+    }
+
+    function getSessionBatchTrainees(bytes32[] calldata sessionIdsBatch) external view returns (address[] memory trainees) {
+        trainees = new address[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            trainees[i] = _sessions[sessionIdsBatch[i]].trainee;
+        }
+    }
+
+    function getSessionBatchStakesTiers(bytes32[] calldata sessionIdsBatch) external view returns (uint8[] memory tiers) {
+        tiers = new uint8[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            tiers[i] = _sessions[sessionIdsBatch[i]].stakesTier;
+        }
+    }
+
+    function getSessionBatchOpenedBlocks(bytes32[] calldata sessionIdsBatch) external view returns (uint256[] memory blocks) {
+        blocks = new uint256[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            blocks[i] = _sessions[sessionIdsBatch[i]].openedAtBlock;
+        }
+    }
+
+    function getSessionBatchHandCounts(bytes32[] calldata sessionIdsBatch) external view returns (uint256[] memory counts) {
+        counts = new uint256[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            counts[i] = _handsBySession[sessionIdsBatch[i]].length;
