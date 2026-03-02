@@ -128,3 +128,68 @@ contract PokerPro {
     modifier onlyTrainer() {
         if (msg.sender != trainer) revert PKR_NotTrainer();
         _;
+    }
+
+    modifier onlyAIOracle() {
+        if (msg.sender != aiOracle) revert PKR_NotAIOracle();
+        _;
+    }
+
+    modifier onlyVaultKeeper() {
+        if (msg.sender != vaultKeeper) revert PKR_NotVaultKeeper();
+        _;
+    }
+
+    modifier whenNotPaused() {
+        if (trainerPaused) revert PKR_TrainerPaused();
+        _;
+    }
+
+    modifier nonReentrant() {
+        if (_reentrancyLock != 0) revert PKR_ReentrantCall();
+        _reentrancyLock = 1;
+        _;
+        _reentrancyLock = 0;
+    }
+
+    // -------------------------------------------------------------------------
+    // WRITES — TRAINER
+    // -------------------------------------------------------------------------
+
+    function openSession(bytes32 sessionId, address trainee, uint8 stakesTier) external onlyTrainer whenNotPaused nonReentrant {
+        if (sessionId == bytes32(0)) revert PKR_ZeroSession();
+        if (trainee == address(0)) revert PKR_ZeroAddress();
+        if (_sessions[sessionId].openedAtBlock != 0) revert PKR_SessionAlreadyOpen();
+        if (sessionCount >= PKR_MAX_SESSIONS) revert PKR_MaxSessionsReached();
+        if (stakesTier > PKR_STAKES_TIER_MAX) revert PKR_InvalidStakesTier();
+
+        _sessionIds.push(sessionId);
+        sessionCount++;
+
+        _sessions[sessionId] = SessionData({
+            trainee: trainee,
+            stakesTier: stakesTier,
+            openedAtBlock: block.number,
+            closedAtBlock: 0,
+            handCount: 0,
+            closed: false
+        });
+        _sessionIdsByTrainee[trainee].push(sessionId);
+
+        emit SessionOpened(sessionId, trainee, stakesTier, block.number);
+    }
+
+    function closeSession(bytes32 sessionId) external onlyTrainer nonReentrant {
+        if (sessionId == bytes32(0)) revert PKR_ZeroSession();
+        SessionData storage s = _sessions[sessionId];
+        if (s.openedAtBlock == 0) revert PKR_SessionNotFound();
+        if (s.closed) revert PKR_SessionClosed();
+
+        s.closed = true;
+        s.closedAtBlock = block.number;
+        uint256 handsPlayed = _handsBySession[sessionId].length;
+        s.handCount = handsPlayed;
+
+        emit SessionClosed(sessionId, handsPlayed, block.number);
+    }
+
