@@ -1363,3 +1363,68 @@ contract PokerPro {
         counts = new uint256[](sessionIdsBatch.length);
         for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
             counts[i] = _handsBySession[sessionIdsBatch[i]].length;
+        }
+    }
+
+    function getSessionBatchFeedbackCounts(bytes32[] calldata sessionIdsBatch) external view returns (uint256[] memory counts) {
+        counts = new uint256[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            counts[i] = _feedbackBySession[sessionIdsBatch[i]].length;
+        }
+    }
+
+    function getSessionBatchClosedBlocks(bytes32[] calldata sessionIdsBatch) external view returns (uint256[] memory blocks) {
+        blocks = new uint256[](sessionIdsBatch.length);
+        for (uint256 i = 0; i < sessionIdsBatch.length; i++) {
+            blocks[i] = _sessions[sessionIdsBatch[i]].closedAtBlock;
+        }
+    }
+
+    function getHandRecordsFull(bytes32 sessionId) external view returns (
+        bytes32[] memory handHashes,
+        uint256[] memory recordedAtBlocks,
+        bytes32[] memory handAnchors
+    ) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        uint256 n = arr.length;
+        handHashes = new bytes32[](n);
+        recordedAtBlocks = new uint256[](n);
+        handAnchors = new bytes32[](n);
+        for (uint256 i = 0; i < n; i++) {
+            handHashes[i] = arr[i].handHash;
+            recordedAtBlocks[i] = arr[i].recordedAtBlock;
+            handAnchors[i] = _computeHandAnchor(sessionId, arr[i].handHash, i, arr[i].recordedAtBlock);
+        }
+    }
+
+    function getFeedbackRecordsFull(bytes32 sessionId) external view returns (
+        bytes32[] memory feedbackHashes,
+        uint8[] memory qualityBands,
+        uint256[] memory anchoredAtBlocks,
+        address[] memory anchoredBy,
+        bytes32[] memory feedbackAnchors
+    ) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        uint256 n = arr.length;
+        feedbackHashes = new bytes32[](n);
+        qualityBands = new uint8[](n);
+        anchoredAtBlocks = new uint256[](n);
+        anchoredBy = new address[](n);
+        feedbackAnchors = new bytes32[](n);
+        for (uint256 i = 0; i < n; i++) {
+            feedbackHashes[i] = arr[i].feedbackHash;
+            qualityBands[i] = arr[i].qualityBand;
+            anchoredAtBlocks[i] = arr[i].anchoredAtBlock;
+            anchoredBy[i] = arr[i].anchoredBy;
+            feedbackAnchors[i] = _computeFeedbackAnchor(sessionId, arr[i].feedbackHash, arr[i].qualityBand, arr[i].anchoredAtBlock);
+        }
+    }
+
+    function getGuidesSliceFull(uint256 offset, uint256 limit) external view returns (
+        bytes32[] memory sessionIds,
+        address[] memory trainees,
+        uint8[] memory stakesTiers,
+        uint256[] memory handCounts,
+        uint256[] memory feedbackCounts,
+        bool[] memory closedFlags
+    ) {
