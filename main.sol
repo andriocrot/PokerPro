@@ -583,3 +583,68 @@ contract PokerPro {
         FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
         if (arr.length == 0) revert PKR_InvalidIndex();
         FeedbackRecord storage r = arr[arr.length - 1];
+        return (r.feedbackHash, r.qualityBand, r.anchoredAtBlock, r.anchoredBy);
+    }
+
+    function computeFeedbackAnchor(bytes32 sessionId, bytes32 feedbackHash, uint8 qualityBand, uint256 atBlock) external pure returns (bytes32) {
+        return keccak256(abi.encodePacked(PKR_FEEDBACK_ANCHOR, sessionId, feedbackHash, qualityBand, atBlock));
+    }
+
+    function computeHandAnchor(bytes32 sessionId, bytes32 handHash, uint256 handIndex, uint256 atBlock) external pure returns (bytes32) {
+        return keccak256(abi.encodePacked(PKR_HAND_ANCHOR, sessionId, handHash, handIndex, atBlock));
+    }
+
+    function getSessionTrainee(bytes32 sessionId) external view returns (address) {
+        return _sessions[sessionId].trainee;
+    }
+
+    function getSessionStakesTier(bytes32 sessionId) external view returns (uint8) {
+        return _sessions[sessionId].stakesTier;
+    }
+
+    function getSessionOpenedAtBlock(bytes32 sessionId) external view returns (uint256) {
+        return _sessions[sessionId].openedAtBlock;
+    }
+
+    function getSessionClosedAtBlock(bytes32 sessionId) external view returns (uint256) {
+        return _sessions[sessionId].closedAtBlock;
+    }
+
+    function getSessionHandCount(bytes32 sessionId) external view returns (uint256) {
+        return _sessions[sessionId].handCount;
+    }
+
+    function getTrainer() external view returns (address) {
+        return trainer;
+    }
+
+    function getAIOracle() external view returns (address) {
+        return aiOracle;
+    }
+
+    function getVaultKeeper() external view returns (address) {
+        return vaultKeeper;
+    }
+
+    function getVault() external view returns (address) {
+        return vault;
+    }
+
+    function getDeployBlock() external view returns (uint256) {
+        return deployBlock;
+    }
+
+    function isTrainerPaused() external view returns (bool) {
+        return trainerPaused;
+    }
+
+    function getDomainSalt() external pure returns (bytes32) {
+        return PKR_DOMAIN_SALT;
+    }
+
+    function getFeedbackAnchorConstant() external pure returns (bytes32) {
+        return PKR_FEEDBACK_ANCHOR;
+    }
+
+    function getHandAnchorConstant() external pure returns (bytes32) {
+        return PKR_HAND_ANCHOR;
