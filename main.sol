@@ -453,3 +453,68 @@ contract PokerPro {
         qualityBands = new uint8[](n);
         anchoredAtBlocks = new uint256[](n);
         anchoredBy = new address[](n);
+        for (uint256 i = 0; i < n; i++) {
+            FeedbackRecord storage r = arr[offset + i];
+            feedbackHashes[i] = r.feedbackHash;
+            qualityBands[i] = r.qualityBand;
+            anchoredAtBlocks[i] = r.anchoredAtBlock;
+            anchoredBy[i] = r.anchoredBy;
+        }
+    }
+
+    function averageQualityBand(bytes32 sessionId) external view returns (uint256 numerator, uint256 denominator) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        uint256 len = arr.length;
+        if (len == 0) return (0, 0);
+        uint256 sum = 0;
+        for (uint256 i = 0; i < len; i++) sum += arr[i].qualityBand;
+        return (sum, len);
+    }
+
+    function getSessionsByTraineeSlice(address trainee, uint256 offset, uint256 limit) external view returns (
+        bytes32[] memory ids,
+        uint8[] memory stakesTiers,
+        uint256[] memory handCounts,
+        bool[] memory closedFlags
+    ) {
+        bytes32[] storage traineeSessions = _sessionIdsByTrainee[trainee];
+        uint256 total = traineeSessions.length;
+        if (offset >= total) {
+            ids = new bytes32[](0);
+            stakesTiers = new uint8[](0);
+            handCounts = new uint256[](0);
+            closedFlags = new bool[](0);
+            return (ids, stakesTiers, handCounts, closedFlags);
+        }
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        uint256 n = end - offset;
+        ids = new bytes32[](n);
+        stakesTiers = new uint8[](n);
+        handCounts = new uint256[](n);
+        closedFlags = new bool[](n);
+        for (uint256 i = 0; i < n; i++) {
+            bytes32 sid = traineeSessions[offset + i];
+            SessionData storage s = _sessions[sid];
+            ids[i] = sid;
+            stakesTiers[i] = s.stakesTier;
+            handCounts[i] = s.handCount;
+            closedFlags[i] = s.closed;
+        }
+    }
+
+    function getSessionSummariesBatch(bytes32[] calldata sessionIdsBatch) external view returns (
+        address[] memory trainees,
+        uint8[] memory stakesTiers,
+        uint256[] memory openedAtBlocks,
+        uint256[] memory handCounts,
+        bool[] memory closedFlags
+    ) {
+        uint256 n = sessionIdsBatch.length;
+        if (n > PKR_MAX_PAGE_SIZE) revert PKR_InvalidIndex();
+        trainees = new address[](n);
+        stakesTiers = new uint8[](n);
+        openedAtBlocks = new uint256[](n);
+        handCounts = new uint256[](n);
+        closedFlags = new bool[](n);
+        for (uint256 i = 0; i < n; i++) {
