@@ -1168,3 +1168,68 @@ contract PokerPro {
         FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
         uint256 count = 0;
         for (uint256 i = 0; i < arr.length; i++) {
+            if (arr[i].anchoredAtBlock >= fromBlock) count++;
+        }
+        indices = new uint256[](count);
+        feedbackHashes = new bytes32[](count);
+        qualityBands = new uint8[](count);
+        anchoredAtBlocks = new uint256[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < arr.length; i++) {
+            if (arr[i].anchoredAtBlock >= fromBlock) {
+                indices[j] = i;
+                feedbackHashes[j] = arr[i].feedbackHash;
+                qualityBands[j] = arr[i].qualityBand;
+                anchoredAtBlocks[j] = arr[i].anchoredAtBlock;
+                j++;
+            }
+        }
+    }
+
+    function getSessionsWithMinHands(uint256 minHands) external view returns (bytes32[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_handsBySession[_sessionIds[i]].length >= minHands) count++;
+        }
+        ids = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_handsBySession[_sessionIds[i]].length >= minHands) {
+                ids[j] = _sessionIds[i];
+                j++;
+            }
+        }
+    }
+
+    function getSessionsWithMinFeedback(uint256 minFeedback) external view returns (bytes32[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_feedbackBySession[_sessionIds[i]].length >= minFeedback) count++;
+        }
+        ids = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            if (_feedbackBySession[_sessionIds[i]].length >= minFeedback) {
+                ids[j] = _sessionIds[i];
+                j++;
+            }
+        }
+    }
+
+    function getTopSessionsByHandCount(uint256 limit) external view returns (bytes32[] memory ids, uint256[] memory counts) {
+        uint256 n = _sessionIds.length;
+        if (n == 0) {
+            ids = new bytes32[](0);
+            counts = new uint256[](0);
+            return (ids, counts);
+        }
+        if (limit > n) limit = n;
+        ids = new bytes32[](limit);
+        counts = new uint256[](limit);
+        uint256[] memory indices = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) indices[i] = i;
+        for (uint256 i = 0; i < n - 1; i++) {
+            for (uint256 j = i + 1; j < n; j++) {
+                uint256 ci = _handsBySession[_sessionIds[indices[i]]].length;
+                uint256 cj = _handsBySession[_sessionIds[indices[j]]].length;
+                if (cj > ci) {
