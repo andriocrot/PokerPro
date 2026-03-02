@@ -193,3 +193,68 @@ contract PokerPro {
         emit SessionClosed(sessionId, handsPlayed, block.number);
     }
 
+    function setTrainerPaused(bool paused) external onlyTrainer nonReentrant {
+        trainerPaused = paused;
+        emit TrainerPauseToggled(paused, msg.sender, block.number);
+    }
+
+    function setStakesTier(bytes32 sessionId, uint8 newTier) external onlyTrainer whenNotPaused nonReentrant {
+        if (sessionId == bytes32(0)) revert PKR_ZeroSession();
+        if (newTier > PKR_STAKES_TIER_MAX) revert PKR_InvalidStakesTier();
+        SessionData storage s = _sessions[sessionId];
+        if (s.openedAtBlock == 0) revert PKR_SessionNotFound();
+        if (s.closed) revert PKR_SessionClosed();
+
+        uint8 previousTier = s.stakesTier;
+        s.stakesTier = newTier;
+        emit StakesTierSet(sessionId, previousTier, newTier, block.number);
+    }
+
+    function unlockTrainingLevel(address trainee, uint8 level) external onlyTrainer nonReentrant {
+        if (trainee == address(0)) revert PKR_ZeroAddress();
+        if (level > PKR_TRAINING_LEVELS) return;
+        if (_trainingLevelReached[trainee] >= level) return;
+        _trainingLevelReached[trainee] = level;
+        emit TrainingLevelUnlocked(trainee, level, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // WRITES — AI ORACLE
+    // -------------------------------------------------------------------------
+
+    function recordHand(bytes32 sessionId, bytes32 handHash) external onlyAIOracle whenNotPaused nonReentrant {
+        if (sessionId == bytes32(0)) revert PKR_ZeroSession();
+        SessionData storage s = _sessions[sessionId];
+        if (s.openedAtBlock == 0) revert PKR_SessionNotFound();
+        if (s.closed) revert PKR_SessionClosed();
+
+        HandRecord[] storage hands = _handsBySession[sessionId];
+        if (hands.length >= PKR_MAX_HANDS_PER_SESSION) revert PKR_MaxHandsPerSession();
+
+        hands.push(HandRecord({ handHash: handHash, recordedAtBlock: block.number }));
+        s.handCount = hands.length;
+
+        emit HandRecorded(sessionId, handHash, hands.length - 1, block.number);
+    }
+
+    function batchRecordHands(bytes32 sessionId, bytes32[] calldata handHashes) external onlyAIOracle whenNotPaused nonReentrant {
+        if (sessionId == bytes32(0)) revert PKR_ZeroSession();
+        SessionData storage s = _sessions[sessionId];
+        if (s.openedAtBlock == 0) revert PKR_SessionNotFound();
+        if (s.closed) revert PKR_SessionClosed();
+
+        uint256 len = handHashes.length;
+        if (len == 0) revert PKR_EmptyBatch();
+        if (len > PKR_MAX_BATCH_HANDS) revert PKR_BatchLengthMismatch();
+
+        HandRecord[] storage hands = _handsBySession[sessionId];
+        if (hands.length + len > PKR_MAX_HANDS_PER_SESSION) revert PKR_MaxHandsPerSession();
+
+        for (uint256 i = 0; i < len; i++) {
+            hands.push(HandRecord({ handHash: handHashes[i], recordedAtBlock: block.number }));
+            emit HandRecorded(sessionId, handHashes[i], hands.length - 1, block.number);
+        }
+        s.handCount = hands.length;
+        emit BatchHandsRecorded(sessionId, len, block.number);
+    }
+
