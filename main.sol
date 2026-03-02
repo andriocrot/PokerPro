@@ -973,3 +973,68 @@ contract PokerPro {
     function getAllFeedbackHashes(bytes32 sessionId) external view returns (bytes32[] memory hashes) {
         hashes = new bytes32[](_feedbackBySession[sessionId].length);
         FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        for (uint256 i = 0; i < arr.length; i++) hashes[i] = arr[i].feedbackHash;
+    }
+
+    function getFullSession(bytes32 sessionId) external view returns (
+        address trainee_,
+        uint8 stakesTier_,
+        uint256 openedAtBlock_,
+        uint256 closedAtBlock_,
+        uint256 handCount_,
+        bool closed_,
+        bytes32[] memory handHashes_,
+        bytes32[] memory feedbackHashes_
+    ) {
+        SessionData storage s = _sessions[sessionId];
+        if (s.openedAtBlock == 0) revert PKR_SessionNotFound();
+        trainee_ = s.trainee;
+        stakesTier_ = s.stakesTier;
+        openedAtBlock_ = s.openedAtBlock;
+        closedAtBlock_ = s.closedAtBlock;
+        handCount_ = s.handCount;
+        closed_ = s.closed;
+        HandRecord[] storage hands = _handsBySession[sessionId];
+        handHashes_ = new bytes32[](hands.length);
+        for (uint256 i = 0; i < hands.length; i++) handHashes_[i] = hands[i].handHash;
+        FeedbackRecord[] storage feedbacks = _feedbackBySession[sessionId];
+        feedbackHashes_ = new bytes32[](feedbacks.length);
+        for (uint256 i = 0; i < feedbacks.length; i++) feedbackHashes_[i] = feedbacks[i].feedbackHash;
+    }
+
+    function getPKRFeedbackCacheBlocks() external pure returns (uint256) {
+        return PKR_FEEDBACK_CACHE_BLOCKS;
+    }
+
+    function version() external pure returns (uint256) {
+        return 1;
+    }
+
+    function contractName() external pure returns (string memory) {
+        return "PokerPro";
+    }
+
+    function totalSessions() external view returns (uint256) {
+        return _sessionIds.length;
+    }
+
+    function sessionTrainee(bytes32 sessionId) external view returns (address) {
+        return _sessions[sessionId].trainee;
+    }
+
+    function sessionStakesTier(bytes32 sessionId) external view returns (uint8) {
+        return _sessions[sessionId].stakesTier;
+    }
+
+    function sessionOpenedBlock(bytes32 sessionId) external view returns (uint256) {
+        return _sessions[sessionId].openedAtBlock;
+    }
+
+    function sessionClosedBlock(bytes32 sessionId) external view returns (uint256) {
+        return _sessions[sessionId].closedAtBlock;
+    }
+
+    function sessionHandCount(bytes32 sessionId) external view returns (uint256) {
+        return _sessions[sessionId].handCount;
+    }
+
