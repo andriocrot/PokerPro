@@ -258,3 +258,68 @@ contract PokerPro {
         emit BatchHandsRecorded(sessionId, len, block.number);
     }
 
+    function anchorAIFeedback(bytes32 sessionId, bytes32 feedbackHash, uint8 qualityBand) external onlyAIOracle whenNotPaused nonReentrant {
+        if (sessionId == bytes32(0)) revert PKR_ZeroSession();
+        if (_sessions[sessionId].openedAtBlock == 0) revert PKR_SessionNotFound();
+        if (_sessions[sessionId].closed) revert PKR_SessionClosed();
+        if (qualityBand > PKR_QUALITY_BAND_MAX) revert PKR_InvalidQualityBand();
+
+        _feedbackBySession[sessionId].push(FeedbackRecord({
+            feedbackHash: feedbackHash,
+            qualityBand: qualityBand,
+            anchoredAtBlock: block.number,
+            anchoredBy: msg.sender
+        }));
+
+        emit AIFeedbackAnchored(sessionId, feedbackHash, qualityBand, msg.sender, block.number);
+    }
+
+    // -------------------------------------------------------------------------
+    // WRITES — VAULT
+    // -------------------------------------------------------------------------
+
+    function setVault(address newVault) external onlyVaultKeeper nonReentrant {
+        if (newVault == address(0)) revert PKR_ZeroAddress();
+        vault = newVault;
+    }
+
+    function sweepToVault() external onlyVaultKeeper nonReentrant {
+        uint256 balance = address(this).balance;
+        if (balance == 0) return;
+        address dest = vault;
+        (bool ok,) = dest.call{ value: balance }("");
+        if (!ok) revert PKR_TransferFailed();
+        emit VaultSweep(dest, balance, block.number);
+    }
+
+    receive() external payable {}
+
+    // -------------------------------------------------------------------------
+    // VIEWS
+    // -------------------------------------------------------------------------
+
+    function getSession(bytes32 sessionId) external view returns (
+        address trainee,
+        uint8 stakesTier,
+        uint256 openedAtBlock,
+        uint256 closedAtBlock,
+        uint256 handCount,
+        bool closed
+    ) {
+        SessionData storage s = _sessions[sessionId];
+        return (s.trainee, s.stakesTier, s.openedAtBlock, s.closedAtBlock, s.handCount, s.closed);
+    }
+
+    function sessionIdAt(uint256 index) external view returns (bytes32) {
+        if (index >= _sessionIds.length) revert PKR_InvalidIndex();
+        return _sessionIds[index];
+    }
+
+    function handCount(bytes32 sessionId) external view returns (uint256) {
+        return _handsBySession[sessionId].length;
+    }
+
+    function getHand(bytes32 sessionId, uint256 index) external view returns (bytes32 handHash, uint256 recordedAtBlock) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        if (index >= arr.length) revert PKR_InvalidIndex();
+        HandRecord storage r = arr[index];
