@@ -843,3 +843,68 @@ contract PokerPro {
 
     function getLatestFeedbackBatch(bytes32[] calldata sessionIdsBatch) external view returns (
         bytes32[] memory feedbackHashes,
+        uint8[] memory qualityBands,
+        uint256[] memory anchoredAtBlocks
+    ) {
+        uint256 n = sessionIdsBatch.length;
+        if (n > PKR_MAX_PAGE_SIZE) revert PKR_InvalidIndex();
+        feedbackHashes = new bytes32[](n);
+        qualityBands = new uint8[](n);
+        anchoredAtBlocks = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            FeedbackRecord[] storage arr = _feedbackBySession[sessionIdsBatch[i]];
+            if (arr.length == 0) {
+                feedbackHashes[i] = bytes32(0);
+                qualityBands[i] = 0;
+                anchoredAtBlocks[i] = 0;
+            } else {
+                FeedbackRecord storage r = arr[arr.length - 1];
+                feedbackHashes[i] = r.feedbackHash;
+                qualityBands[i] = r.qualityBand;
+                anchoredAtBlocks[i] = r.anchoredAtBlock;
+            }
+        }
+    }
+
+    function getSessionIdsPaginated(uint256 page, uint256 pageSize) external view returns (bytes32[] memory ids, uint256 total) {
+        total = _sessionIds.length;
+        uint256 offset = page * pageSize;
+        if (offset >= total) return (new bytes32[](0), total);
+        uint256 end = offset + pageSize;
+        if (end > total) end = total;
+        uint256 n = end - offset;
+        ids = new bytes32[](n);
+        for (uint256 i = 0; i < n; i++) ids[i] = _sessionIds[offset + i];
+    }
+
+    function getFirstNSessionIds(uint256 n) external view returns (bytes32[] memory ids) {
+        uint256 total = _sessionIds.length;
+        if (n > total) n = total;
+        if (n == 0) return new bytes32[](0);
+        ids = new bytes32[](n);
+        for (uint256 i = 0; i < n; i++) ids[i] = _sessionIds[i];
+    }
+
+    function getLastNSessionIds(uint256 n) external view returns (bytes32[] memory ids) {
+        uint256 total = _sessionIds.length;
+        if (n > total) n = total;
+        if (n == 0) return new bytes32[](0);
+        ids = new bytes32[](n);
+        uint256 start = total - n;
+        for (uint256 i = 0; i < n; i++) ids[i] = _sessionIds[start + i];
+    }
+
+    function getTraineesWithSessions() external view returns (address[] memory trainees) {
+        uint256 cap = _sessionIds.length;
+        address[] memory temp = new address[](cap);
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            address t = _sessions[_sessionIds[i]].trainee;
+            bool found = false;
+            for (uint256 j = 0; j < count; j++) {
+                if (temp[j] == t) { found = true; break; }
+            }
+            if (!found) {
+                temp[count] = t;
+                count++;
+            }
