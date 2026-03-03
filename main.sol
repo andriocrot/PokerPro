@@ -1493,3 +1493,68 @@ contract PokerPro {
         feedbackCounts = new uint256[](n);
         closedFlags = new bool[](n);
         for (uint256 i = 0; i < n; i++) {
+            SessionData storage s = _sessions[sids[i]];
+            ids[i] = sids[i];
+            stakesTiers[i] = s.stakesTier;
+            openedAtBlocks[i] = s.openedAtBlock;
+            closedAtBlocks[i] = s.closedAtBlock;
+            handCounts[i] = s.handCount;
+            feedbackCounts[i] = _feedbackBySession[sids[i]].length;
+            closedFlags[i] = s.closed;
+        }
+    }
+
+    function getContractInfo() external pure returns (
+        string memory name,
+        uint256 version_
+    ) {
+        return ("PokerPro", 1);
+    }
+
+    function supportsSession(bytes32 sessionId) external view returns (bool) {
+        return _sessions[sessionId].openedAtBlock != 0;
+    }
+
+    function hasHands(bytes32 sessionId) external view returns (bool) {
+        return _handsBySession[sessionId].length > 0;
+    }
+
+    function hasFeedback(bytes32 sessionId) external view returns (bool) {
+        return _feedbackBySession[sessionId].length > 0;
+    }
+
+    function canReceiveEth() external pure returns (bool) {
+        return true;
+    }
+
+    function getBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function pkrMaxBatchHands() external pure returns (uint256) { return PKR_MAX_BATCH_HANDS; }
+    function pkrFeedbackCacheBlocks() external pure returns (uint256) { return PKR_FEEDBACK_CACHE_BLOCKS; }
+    function saltDomain() external pure returns (bytes32) { return PKR_DOMAIN_SALT; }
+    function saltFeedbackAnchor() external pure returns (bytes32) { return PKR_FEEDBACK_ANCHOR; }
+    function saltHandAnchor() external pure returns (bytes32) { return PKR_HAND_ANCHOR; }
+    function roleTrainer() external view returns (address) { return trainer; }
+    function roleAIOracle() external view returns (address) { return aiOracle; }
+    function roleVaultKeeper() external view returns (address) { return vaultKeeper; }
+    function roleVault() external view returns (address) { return vault; }
+    function blockDeployed() external view returns (uint256) { return deployBlock; }
+    function isPaused() external view returns (bool) { return trainerPaused; }
+    function totalSessionCount() external view returns (uint256) { return _sessionIds.length; }
+    function handCountForSession(bytes32 sessionId) external view returns (uint256) { return _handsBySession[sessionId].length; }
+    function feedbackCountForSession(bytes32 sessionId) external view returns (uint256) { return _feedbackBySession[sessionId].length; }
+    function traineeForSession(bytes32 sessionId) external view returns (address) { return _sessions[sessionId].trainee; }
+    function stakesTierForSession(bytes32 sessionId) external view returns (uint8) { return _sessions[sessionId].stakesTier; }
+    function openedBlockForSession(bytes32 sessionId) external view returns (uint256) { return _sessions[sessionId].openedAtBlock; }
+    function closedBlockForSession(bytes32 sessionId) external view returns (uint256) { return _sessions[sessionId].closedAtBlock; }
+    function closedForSession(bytes32 sessionId) external view returns (bool) { return _sessions[sessionId].closed; }
+    function levelForTrainee(address trainee) external view returns (uint8) { return _trainingLevelReached[trainee]; }
+    function sessionIdsForTraineeCount(address trainee) external view returns (uint256) { return _sessionIdsByTrainee[trainee].length; }
+    function sessionIdForTraineeAt(address trainee, uint256 index) external view returns (bytes32) {
+        if (index >= _sessionIdsByTrainee[trainee].length) revert PKR_InvalidIndex();
+        return _sessionIdsByTrainee[trainee][index];
+    }
+    function handHashAt(bytes32 sessionId, uint256 index) external view returns (bytes32) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
