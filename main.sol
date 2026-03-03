@@ -1558,3 +1558,68 @@ contract PokerPro {
     }
     function handHashAt(bytes32 sessionId, uint256 index) external view returns (bytes32) {
         HandRecord[] storage arr = _handsBySession[sessionId];
+        if (index >= arr.length) revert PKR_InvalidIndex();
+        return arr[index].handHash;
+    }
+    function handBlockAt(bytes32 sessionId, uint256 index) external view returns (uint256) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        if (index >= arr.length) revert PKR_InvalidIndex();
+        return arr[index].recordedAtBlock;
+    }
+    function feedbackHashAt(bytes32 sessionId, uint256 index) external view returns (bytes32) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        if (index >= arr.length) revert PKR_InvalidIndex();
+        return arr[index].feedbackHash;
+    }
+    function feedbackQualityAt(bytes32 sessionId, uint256 index) external view returns (uint8) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        if (index >= arr.length) revert PKR_InvalidIndex();
+        return arr[index].qualityBand;
+    }
+    function feedbackBlockAt(bytes32 sessionId, uint256 index) external view returns (uint256) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        if (index >= arr.length) revert PKR_InvalidIndex();
+        return arr[index].anchoredAtBlock;
+    }
+    function feedbackAnchoredByAt(bytes32 sessionId, uint256 index) external view returns (address) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        if (index >= arr.length) revert PKR_InvalidIndex();
+        return arr[index].anchoredBy;
+    }
+    function computeFeedbackHash(bytes32 sessionId, bytes32 feedbackHash, uint8 qualityBand, uint256 atBlock) external pure returns (bytes32) {
+        return keccak256(abi.encodePacked(PKR_FEEDBACK_ANCHOR, sessionId, feedbackHash, qualityBand, atBlock));
+    }
+    function computeHandHash(bytes32 sessionId, bytes32 handHash, uint256 handIndex, uint256 atBlock) external pure returns (bytes32) {
+        return keccak256(abi.encodePacked(PKR_HAND_ANCHOR, sessionId, handHash, handIndex, atBlock));
+    }
+
+    function getSessionAtIndex(uint256 index) external view returns (bytes32) {
+        if (index >= _sessionIds.length) revert PKR_InvalidIndex();
+        return _sessionIds[index];
+    }
+
+    function getSessionsBetweenBlocks(uint256 fromBlock, uint256 toBlock) external view returns (bytes32[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            uint256 b = _sessions[_sessionIds[i]].openedAtBlock;
+            if (b >= fromBlock && b <= toBlock) count++;
+        }
+        ids = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            uint256 b = _sessions[_sessionIds[i]].openedAtBlock;
+            if (b >= fromBlock && b <= toBlock) {
+                ids[j] = _sessionIds[i];
+                j++;
+            }
+        }
+    }
+
+    function getClosedSessionsBetweenBlocks(uint256 fromBlock, uint256 toBlock) external view returns (bytes32[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            SessionData storage s = _sessions[_sessionIds[i]];
+            if (s.closed && s.closedAtBlock >= fromBlock && s.closedAtBlock <= toBlock) count++;
+        }
+        ids = new bytes32[](count);
+        uint256 j = 0;
