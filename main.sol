@@ -1688,3 +1688,68 @@ contract PokerPro {
         if (s.openedAtBlock == 0) revert PKR_SessionNotFound();
         return (
             s.trainee,
+            s.stakesTier,
+            s.handCount,
+            _feedbackBySession[sessionId].length,
+            s.closed
+        );
+    }
+
+    function getSessionSummariesForTrainee(address trainee) external view returns (
+        bytes32[] memory ids,
+        uint8[] memory stakesTiers,
+        uint256[] memory handCounts,
+        uint256[] memory feedbackCounts,
+        bool[] memory closedFlags
+    ) {
+        bytes32[] storage sids = _sessionIdsByTrainee[trainee];
+        uint256 n = sids.length;
+        ids = new bytes32[](n);
+        stakesTiers = new uint8[](n);
+        handCounts = new uint256[](n);
+        feedbackCounts = new uint256[](n);
+        closedFlags = new bool[](n);
+        for (uint256 i = 0; i < n; i++) {
+            SessionData storage s = _sessions[sids[i]];
+            ids[i] = sids[i];
+            stakesTiers[i] = s.stakesTier;
+            handCounts[i] = s.handCount;
+            feedbackCounts[i] = _feedbackBySession[sids[i]].length;
+            closedFlags[i] = s.closed;
+        }
+    }
+
+    function verifyAllFeedbackAnchorsForSession(bytes32 sessionId) external view returns (bytes32[] memory anchors) {
+        FeedbackRecord[] storage arr = _feedbackBySession[sessionId];
+        anchors = new bytes32[](arr.length);
+        for (uint256 i = 0; i < arr.length; i++) {
+            anchors[i] = _computeFeedbackAnchor(sessionId, arr[i].feedbackHash, arr[i].qualityBand, arr[i].anchoredAtBlock);
+        }
+    }
+
+    function verifyAllHandAnchorsForSession(bytes32 sessionId) external view returns (bytes32[] memory anchors) {
+        HandRecord[] storage arr = _handsBySession[sessionId];
+        anchors = new bytes32[](arr.length);
+        for (uint256 i = 0; i < arr.length; i++) {
+            anchors[i] = _computeHandAnchor(sessionId, arr[i].handHash, i, arr[i].recordedAtBlock);
+        }
+    }
+
+    function getConstants() external pure returns (
+        uint256 maxSessions_,
+        uint256 maxHandsPerSession_,
+        uint256 maxBatchHands_,
+        uint256 stakesTierMax_,
+        uint256 qualityBandMax_,
+        uint256 trainingLevels_,
+        uint256 maxPageSize_,
+        uint256 feedbackCacheBlocks_
+    ) {
+        return (
+            PKR_MAX_SESSIONS,
+            PKR_MAX_HANDS_PER_SESSION,
+            PKR_MAX_BATCH_HANDS,
+            PKR_STAKES_TIER_MAX,
+            PKR_QUALITY_BAND_MAX,
+            PKR_TRAINING_LEVELS,
+            PKR_MAX_PAGE_SIZE,
