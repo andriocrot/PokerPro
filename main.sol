@@ -1753,3 +1753,68 @@ contract PokerPro {
             PKR_QUALITY_BAND_MAX,
             PKR_TRAINING_LEVELS,
             PKR_MAX_PAGE_SIZE,
+            PKR_FEEDBACK_CACHE_BLOCKS
+        );
+    }
+
+    function getRoleAddresses() external view returns (
+        address trainer_,
+        address aiOracle_,
+        address vaultKeeper_,
+        address vault_
+    ) {
+        return (trainer, aiOracle, vaultKeeper, vault);
+    }
+
+    function getSalts() external pure returns (
+        bytes32 domainSalt_,
+        bytes32 feedbackAnchor_,
+        bytes32 handAnchor_
+    ) {
+        return (PKR_DOMAIN_SALT, PKR_FEEDBACK_ANCHOR, PKR_HAND_ANCHOR);
+    }
+
+    function sessionTraineeAddress(bytes32 sessionId) external view returns (address) { return _sessions[sessionId].trainee; }
+    function sessionStakesTierValue(bytes32 sessionId) external view returns (uint8) { return _sessions[sessionId].stakesTier; }
+    function sessionOpenedAt(bytes32 sessionId) external view returns (uint256) { return _sessions[sessionId].openedAtBlock; }
+    function sessionClosedAt(bytes32 sessionId) external view returns (uint256) { return _sessions[sessionId].closedAtBlock; }
+    function sessionNumberOfHands(bytes32 sessionId) external view returns (uint256) { return _sessions[sessionId].handCount; }
+    function sessionIsClosedFlag(bytes32 sessionId) external view returns (bool) { return _sessions[sessionId].closed; }
+    function trainerRole() external view returns (address) { return trainer; }
+    function aiOracleRole() external view returns (address) { return aiOracle; }
+    function vaultKeeperRole() external view returns (address) { return vaultKeeper; }
+    function vaultRole() external view returns (address) { return vault; }
+    function deployedAtBlock() external view returns (uint256) { return deployBlock; }
+    function trainerPausedFlag() external view returns (bool) { return trainerPaused; }
+    function totalSessionsCount() external view returns (uint256) { return _sessionIds.length; }
+    function numberOfHandsInSession(bytes32 sessionId) external view returns (uint256) { return _handsBySession[sessionId].length; }
+    function numberOfFeedbackInSession(bytes32 sessionId) external view returns (uint256) { return _feedbackBySession[sessionId].length; }
+    function sessionBelongsToTrainee(bytes32 sessionId) external view returns (address) { return _sessions[sessionId].trainee; }
+    function sessionStakesLevel(bytes32 sessionId) external view returns (uint8) { return _sessions[sessionId].stakesTier; }
+    function sessionOpenBlock(bytes32 sessionId) external view returns (uint256) { return _sessions[sessionId].openedAtBlock; }
+    function sessionCloseBlock(bytes32 sessionId) external view returns (uint256) { return _sessions[sessionId].closedAtBlock; }
+    function sessionClosedFlag(bytes32 sessionId) external view returns (bool) { return _sessions[sessionId].closed; }
+    function trainingLevelUnlocked(address trainee) external view returns (uint8) { return _trainingLevelReached[trainee]; }
+    function countSessionsForTrainee(address trainee) external view returns (uint256) { return _sessionIdsByTrainee[trainee].length; }
+    function sessionIdOfTrainee(address trainee, uint256 index) external view returns (bytes32) {
+        if (index >= _sessionIdsByTrainee[trainee].length) revert PKR_InvalidIndex();
+        return _sessionIdsByTrainee[trainee][index];
+    }
+
+    function maxSessionsConstant() external pure returns (uint256) { return PKR_MAX_SESSIONS; }
+    function maxHandsPerSessionConstant() external pure returns (uint256) { return PKR_MAX_HANDS_PER_SESSION; }
+    function maxBatchHandsConstant() external pure returns (uint256) { return PKR_MAX_BATCH_HANDS; }
+    function stakesTierMaxConstant() external pure returns (uint256) { return PKR_STAKES_TIER_MAX; }
+    function qualityBandMaxConstant() external pure returns (uint256) { return PKR_QUALITY_BAND_MAX; }
+    function trainingLevelsConstant() external pure returns (uint256) { return PKR_TRAINING_LEVELS; }
+    function maxPageSizeConstant() external pure returns (uint256) { return PKR_MAX_PAGE_SIZE; }
+    function feedbackCacheBlocksConstant() external pure returns (uint256) { return PKR_FEEDBACK_CACHE_BLOCKS; }
+    function domainSaltConstant() external pure returns (bytes32) { return PKR_DOMAIN_SALT; }
+    function feedbackAnchorConstant() external pure returns (bytes32) { return PKR_FEEDBACK_ANCHOR; }
+    function handAnchorConstant() external pure returns (bytes32) { return PKR_HAND_ANCHOR; }
+    function trainerAddressImmutable() external view returns (address) { return trainer; }
+    function aiOracleAddressImmutable() external view returns (address) { return aiOracle; }
+    function vaultKeeperAddressImmutable() external view returns (address) { return vaultKeeper; }
+    function vaultAddressState() external view returns (address) { return vault; }
+    function deployBlockImmutable() external view returns (uint256) { return deployBlock; }
+    function pausedState() external view returns (bool) { return trainerPaused; }
