@@ -1428,3 +1428,68 @@ contract PokerPro {
         uint256[] memory feedbackCounts,
         bool[] memory closedFlags
     ) {
+        uint256 total = _sessionIds.length;
+        if (offset >= total) {
+            sessionIds = new bytes32[](0);
+            trainees = new address[](0);
+            stakesTiers = new uint8[](0);
+            handCounts = new uint256[](0);
+            feedbackCounts = new uint256[](0);
+            closedFlags = new bool[](0);
+            return (sessionIds, trainees, stakesTiers, handCounts, feedbackCounts, closedFlags);
+        }
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        uint256 n = end - offset;
+        sessionIds = new bytes32[](n);
+        trainees = new address[](n);
+        stakesTiers = new uint8[](n);
+        handCounts = new uint256[](n);
+        feedbackCounts = new uint256[](n);
+        closedFlags = new bool[](n);
+        for (uint256 i = 0; i < n; i++) {
+            bytes32 sid = _sessionIds[offset + i];
+            SessionData storage s = _sessions[sid];
+            sessionIds[i] = sid;
+            trainees[i] = s.trainee;
+            stakesTiers[i] = s.stakesTier;
+            handCounts[i] = s.handCount;
+            feedbackCounts[i] = _feedbackBySession[sid].length;
+            closedFlags[i] = s.closed;
+        }
+    }
+
+    function getTraineeStats(address trainee) external view returns (
+        uint256 sessionCount_,
+        uint256 totalHands_,
+        uint256 totalFeedback_,
+        uint8 levelReached_
+    ) {
+        bytes32[] storage sids = _sessionIdsByTrainee[trainee];
+        sessionCount_ = sids.length;
+        levelReached_ = _trainingLevelReached[trainee];
+        for (uint256 i = 0; i < sids.length; i++) {
+            totalHands_ += _handsBySession[sids[i]].length;
+            totalFeedback_ += _feedbackBySession[sids[i]].length;
+        }
+    }
+
+    function getSessionsByTraineeFull(address trainee) external view returns (
+        bytes32[] memory ids,
+        uint8[] memory stakesTiers,
+        uint256[] memory openedAtBlocks,
+        uint256[] memory closedAtBlocks,
+        uint256[] memory handCounts,
+        uint256[] memory feedbackCounts,
+        bool[] memory closedFlags
+    ) {
+        bytes32[] storage sids = _sessionIdsByTrainee[trainee];
+        uint256 n = sids.length;
+        ids = new bytes32[](n);
+        stakesTiers = new uint8[](n);
+        openedAtBlocks = new uint256[](n);
+        closedAtBlocks = new uint256[](n);
+        handCounts = new uint256[](n);
+        feedbackCounts = new uint256[](n);
+        closedFlags = new bool[](n);
+        for (uint256 i = 0; i < n; i++) {
