@@ -1623,3 +1623,68 @@ contract PokerPro {
         }
         ids = new bytes32[](count);
         uint256 j = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            SessionData storage s = _sessions[_sessionIds[i]];
+            if (s.closed && s.closedAtBlock >= fromBlock && s.closedAtBlock <= toBlock) {
+                ids[j] = _sessionIds[i];
+                j++;
+            }
+        }
+    }
+
+    function getDistinctTraineeCount() external view returns (uint256 count) {
+        uint256 cap = _sessionIds.length;
+        address[] memory seen = new address[](cap);
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            address t = _sessions[_sessionIds[i]].trainee;
+            bool found = false;
+            for (uint256 j = 0; j < count; j++) {
+                if (seen[j] == t) { found = true; break; }
+            }
+            if (!found) {
+                seen[count] = t;
+                count++;
+            }
+        }
+    }
+
+    function getSessionsWithStakesTierBetween(uint8 tierLow, uint8 tierHigh) external view returns (bytes32[] memory ids) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            uint8 t = _sessions[_sessionIds[i]].stakesTier;
+            if (t >= tierLow && t <= tierHigh) count++;
+        }
+        ids = new bytes32[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            uint8 t = _sessions[_sessionIds[i]].stakesTier;
+            if (t >= tierLow && t <= tierHigh) {
+                ids[j] = _sessionIds[i];
+                j++;
+            }
+        }
+    }
+
+    function getTotalHandsAcrossAllSessions() external view returns (uint256 total) {
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            total += _handsBySession[_sessionIds[i]].length;
+        }
+    }
+
+    function getTotalFeedbackAcrossAllSessions() external view returns (uint256 total) {
+        for (uint256 i = 0; i < _sessionIds.length; i++) {
+            total += _feedbackBySession[_sessionIds[i]].length;
+        }
+    }
+
+    function getSessionSummary(bytes32 sessionId) external view returns (
+        address trainee_,
+        uint8 stakesTier_,
+        uint256 handCount_,
+        uint256 feedbackCount_,
+        bool closed_
+    ) {
+        SessionData storage s = _sessions[sessionId];
+        if (s.openedAtBlock == 0) revert PKR_SessionNotFound();
+        return (
+            s.trainee,
